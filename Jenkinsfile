@@ -173,7 +173,7 @@ pipeline {
         script {
           //if (params.deploy_image) {
             masters.each { master ->
-              def runCont = "ssh -o StrictHostKeyChecking=no airflow@${master} \"cd /usr/local/amundsen && docker-compose -f docker-amundsen.yml up\""
+              def runCont = "ssh -o StrictHostKeyChecking=no airflow@${master} \"cd /usr/local/amundsen && docker-compose -f docker-amundsen.yml up -d\""
               sshagent (credentials: ['37c018e2-e1c9-46bd-85cf-c1d14017a9c9']) {
                 sh(returnStdout: true, script:runCont)
               }
