@@ -43,7 +43,8 @@ pipeline {
       steps {
         script {
           enviro = getEnvironment()
-          (masters,workers) = getBIServers()
+          // (masters,workers) = getBIServers()
+          (masters,workers) = [['dcall-42.prod.bi.lmc'],[]]
           servers = masters + workers
           registry = getRegistry()
           def currentDate = sh(returnStdout: true, script: 'date +"%Y.%m.%d.%H%M%S"').trim()
