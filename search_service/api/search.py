@@ -1,6 +1,6 @@
 from typing import Iterable, Any
 
-from flask_restful import Resource, fields, marshal_with, reqparse
+from flask_restful import Resource, fields, marshal_with, reqparse, marshal
 
 from search_service.proxy import get_proxy_client
 
@@ -19,9 +19,52 @@ table_fields = {
     "last_updated_epoch": fields.Integer,
 }
 
+dashboard_fields = {
+    "dashboard_group": fields.String,
+    "dashboard_name": fields.String,
+    # description can be empty, if no description is present in DB
+    "description": fields.String,
+    "last_reload_time": fields.String,
+    "user_id": fields.String,
+    "user_name": fields.String,
+    "tags": fields.List(fields.String)
+}
+
+metric_fields = {
+    "dashboard_group": fields.String,
+    "dashboard_name": fields.String,
+    "metric_name": fields.String,
+    "metric_function": fields.String,
+    # description can be empty, if no description is present in DB
+    "metric_description": fields.String,
+    "metric_type": fields.String,
+    "metric_group": fields.String
+}
+
+table_result_fields = {
+    "result_count": fields.Integer,
+    "results": fields.List(fields.Nested(table_fields), default=[])
+}
+
+dashboard_result_fields = {
+    "result_count": fields.Integer,
+    "results": fields.List(fields.Nested(dashboard_fields), default=[])
+}
+
+metric_result_fields = {
+    "result_count": fields.Integer,
+    "results": fields.List(fields.Nested(metric_fields), default=[])
+}
+
+result_fields = {
+    "dashboards": fields.Nested(dashboard_result_fields),
+    "tables": fields.Nested(table_result_fields),
+    "metrics": fields.Nested(metric_result_fields),
+}
+
 search_results = {
     "total_results": fields.Integer,
-    "results": fields.Nested(table_fields, default=[])
+    "results":  fields.Nested(result_fields)
 }
 
 

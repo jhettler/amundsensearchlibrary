@@ -33,7 +33,7 @@ class Config:
     ATLAS_NAME_ATTRIBUTE = 'qualifiedName'
 
     # Config used by ElastichSearch
-    ELASTICSEARCH_INDEX = 'table_search_index'
+    ELASTICSEARCH_INDEX = '_all'
 
 
 class LocalConfig(Config):

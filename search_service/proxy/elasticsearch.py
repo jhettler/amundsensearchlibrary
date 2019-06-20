@@ -8,6 +8,8 @@ from flask import current_app
 from search_service import config
 from search_service.models.search_result import SearchResult
 from search_service.models.table import Table
+from search_service.models.dashboard import Dashboard
+from search_service.models.metric import Metric
 from search_service.proxy.base import BaseProxy
 from search_service.proxy.statsd_utilities import timer_with_counter
 
@@ -74,29 +76,70 @@ class ElasticsearchProxy(BaseProxy):
         :param client
         :return:
         """
+        dashboard_results = []
         table_results = []
+        metric_results = []
         # Use {page_index} to calculate index of results to fetch from
         start_from = page_index * self.page_size
         end_at = start_from + self.page_size
         client = client[start_from:end_at]
         response = client.execute()
 
+        table_count = 0
+        dashboard_count = 0
+        metric_count = 0
+
         for hit in response:
 
-            table = Table(name=hit.table_name,
-                          key=hit.table_key,
-                          description=hit.table_description,
-                          cluster=hit.cluster,
-                          database=hit.database,
-                          schema_name=hit.schema_name,
-                          column_names=hit.column_names,
-                          tags=hit.tag_names,
-                          last_updated_epoch=hit.table_last_updated_epoch)
+            if hit.meta.doc_type == 'table':
+                table_count += 1
 
-            table_results.append(table)
+                table = Table(name=hit.table_name,
+                              key=hit.table_key,
+                              description=hit.table_description,
+                              cluster=hit.cluster,
+                              database=hit.database,
+                              schema_name=hit.schema_name,
+                              column_names=hit.column_names,
+                              tags=hit.tag_names,
+                              last_updated_epoch=hit.table_last_updated_epoch)
+
+                table_results.append(table)
+
+            elif hit.meta.doc_type == 'dashboard':
+                dashboard_count += 1
+
+                dashboard = Dashboard(dashboard_group=hit.dashboard_group,
+                                      dashboard_name=hit.dashboard_name,
+                                      description=hit.description,
+                                      last_reload_time=hit.last_reload_time,
+                                      user_id=hit.user_id,
+                                      user_name=hit.user_name,
+                                      tags=hit.tags)
+
+                dashboard_results.append(dashboard)
+
+            elif hit.meta.doc_type == 'metric':
+                metric_count += 1
+
+                metric = Metric(dashboard_group=hit.dashboard_group,
+                                dashboard_name=hit.dashboard_name,
+                                metric_name=hit.metric_name,
+                                metric_function=hit.metric_function,
+                                metric_description=hit.metric_description,
+                                metric_type=hit.metric_type,
+                                metric_group=hit.metric_group)
+
+                metric_results.append(metric)
+
+        results = {
+                    "dashboards": {"result_count": dashboard_count, "results": dashboard_results},
+                    "tables": {"result_count": table_count, "results": table_results},
+                    "metrics": {"result_count": metric_count, "results": metric_results}
+                    }
 
         return SearchResult(total_results=response.hits.total,
-                            results=table_results)
+                            results=results)
 
     def _search_helper(self, query_term: str,
                        page_index: int,
@@ -131,6 +174,16 @@ class ElasticsearchProxy(BaseProxy):
                     "field_value_factor": {
                         "field": "total_usage",
                         "modifier": "log1p"
+                    }
+                }
+            }
+
+            d = {
+                "function_score": {
+                    "query": {
+                        "multi_match": {
+                            "query": query_term
+                        }
                     }
                 }
             }
@@ -206,7 +259,7 @@ class ElasticsearchProxy(BaseProxy):
         field_name = self._field_name_transform(field_name=field_name)
 
         # We allow user to use ? * for wildcard support
-        m = re.search('[\?\*]', field_value)
+        m = re.search(r'[\?\*]', field_value)
         if m:
             return self._search_wildcard_helper(field_value=field_value,
                                                 page_index=page_index,
