@@ -1,4 +1,11 @@
 # Amundsen Search service
+[![PyPI version](https://badge.fury.io/py/amundsen-search.svg)](https://badge.fury.io/py/amundsen-search)
+[![Build Status](https://api.travis-ci.com/lyft/amundsensearchlibrary.svg?branch=master)](https://travis-ci.com/lyft/amundsensearchlibrary)
+[![Coverage Status](https://img.shields.io/codecov/c/github/lyft/amundsensearchlibrary/master.svg)](https://codecov.io/github/lyft/amundsensearchlibrary?branch=master)
+[![License](http://img.shields.io/:license-Apache%202-blue.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+[![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://bit.ly/2FVq37z)
+
 Amundsen Search service serves a Restful API and is responsible for searching metadata. The service leverages [Elasticsearch](https://www.elastic.co/products/elasticsearch "Elasticsearch") for most of it's search capabilites.
 
 ## Instructions to start the Search service from distribution
@@ -34,8 +41,8 @@ $ curl -v http://localhost:5000/healthcheck
 
 ## Instructions to start the service from the Docker
 ```bash
-$ docker pull amundsen-search
-$ docker run -p 5000:5000 amundsen-search
+$ docker pull amundsendev/amundsen-search:latest
+$ docker run -p 5000:5000 amundsendev/amundsen-search
 ```
 
 In different terminal, verify the service is up by running
@@ -85,10 +92,14 @@ Proxy package contains proxy modules that talks dependencies of Search service. 
 ##### [Elasticsearch proxy module](https://github.com/lyft/amundsensearchlibrary/blob/master/search_service/proxy/elasticsearch.py "Elasticsearch proxy module")
 [Elasticsearch](https://www.elastic.co/products/elasticsearch "Elasticsearch") proxy module serves various use case of searching metadata from Elasticsearch. It uses [Query DSL](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl.html "Query DSL") for the use case, execute the search query and transform into [model](https://github.com/lyft/amundsensearchlibrary/tree/master/search_service/models "model").
 
+##### [Atlas proxy module](https://github.com/lyft/amundsensearchlibrary/blob/master/search_service/proxy/atlas.py "Atlas proxy module") 
+[Apache Atlas](https://atlas.apache.org/ "Apache Atlas") proxy module uses Atlas to serve the Atlas requests. At the moment the search DSL REST api is used via the [Python Client](https://atlasclient.readthedocs.io/ "Atlas Client"). 
+
+
 ##### [Statsd utilities module](https://github.com/lyft/amundsensearchlibrary/blob/master/search_service/proxy/statsd_utilities.py "Statsd utilities module")
 [Statsd](https://github.com/etsy/statsd/wiki "Statsd") utilities module has methods / functions to support statsd to publish metrics. By default, statsd integration is disabled and you can turn in on from [Search service configuration](https://github.com/lyft/amundsensearchlibrary/blob/master/search_service/config.py#L7 "Search service configuration").
 For specific configuration related to statsd, you can configure it through [environment variable.](https://statsd.readthedocs.io/en/latest/configure.html#from-the-environment "environment variable.")
 
 ### [Models package](https://github.com/lyft/amundsensearchlibrary/tree/master/search_service/models "Models package")
-Models package contains many modules where each module has many Python classes in it. These Python classes are being used as a schema and a data holder. All data exchange within Amundsen Search service use classes in Models to ensure validity of itself and improve readability and mainatability.
+Models package contains many modules where each module has many Python classes in it. These Python classes are being used as a schema and a data holder. All data exchange within Amundsen Search service use classes in Models to ensure validity of itself and improve readability and maintainability.
 

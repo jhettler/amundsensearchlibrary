@@ -1,38 +1,36 @@
-from typing import List  # noqa: F401
-from threading import Lock
 import logging
 import re
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, query
-
 from flask import current_app
 
 from search_service import config
 from search_service.models.search_result import SearchResult
 from search_service.models.table import Table
+from search_service.models.dashboard import Dashboard
+from search_service.models.metric import Metric
+from search_service.proxy.base import BaseProxy
 from search_service.proxy.statsd_utilities import timer_with_counter
 
 # Default Elasticsearch index to use, if none specified
 DEFAULT_ES_INDEX = 'table_search_index'
 
-# default search page size
-DEFAULT_PAGE_SIZE = 10
-
 LOGGING = logging.getLogger(__name__)
 
 
-class ElasticsearchProxy:
+class ElasticsearchProxy(BaseProxy):
     """
     ElasticSearch connection handler
     """
     def __init__(self, *,
                  host: str = None,
+                 user: str = '',
                  index: str = None,
-                 auth_user: str = '',
-                 auth_pw: str = '',
-                 elasticsearch_client: Elasticsearch = None,
-                 page_size: int = DEFAULT_PAGE_SIZE) -> None:
+                 password: str = '',
+                 client: Elasticsearch = None,
+                 page_size: int = 10
+                 ) -> None:
         """
         Constructs Elasticsearch client for interactions with the cluster.
         Allows caller to pass a fully constructed Elasticsearch client, {elasticsearch_client}
@@ -45,21 +43,21 @@ class ElasticsearchProxy:
         :param elasticsearch_client: Elasticsearch client to use, if provided
         :param  page_size: Number of search results to return per request
         """
-        if elasticsearch_client:
-            self.elasticsearch = elasticsearch_client
+        if client:
+            self.elasticsearch = client
         else:
             self.elasticsearch = self._create_client_from_credentials(host=host,
-                                                                      auth_user=auth_user,
-                                                                      auth_pw=auth_pw)
+                                                                      user=user,
+                                                                      password=password)
 
-        self.index = index
+        self.index = index or current_app.config.get(config.ELASTICSEARCH_INDEX_KEY, DEFAULT_ES_INDEX)
         self.page_size = page_size
 
     @staticmethod
     def _create_client_from_credentials(*,
                                         host: str = None,
-                                        auth_user: str = '',
-                                        auth_pw: str = '') -> Elasticsearch:
+                                        user: str = '',
+                                        password: str = '') -> Elasticsearch:
         """
         Construct Elasticsearch client that connects to cluster at {host}
         and authenticates using {auth_user} and {auth_pw}
@@ -67,7 +65,7 @@ class ElasticsearchProxy:
         the client
         :return: Elasticsearch client object
         """
-        return Elasticsearch(host, http_auth=(auth_user, auth_pw))
+        return Elasticsearch(host, http_auth=(user, password))
 
     def _get_search_result(self, page_index: int,
                            client: Search) -> SearchResult:
@@ -78,29 +76,70 @@ class ElasticsearchProxy:
         :param client
         :return:
         """
+        dashboard_results = []
         table_results = []
+        metric_results = []
         # Use {page_index} to calculate index of results to fetch from
         start_from = page_index * self.page_size
         end_at = start_from + self.page_size
         client = client[start_from:end_at]
         response = client.execute()
 
+        table_count = 0
+        dashboard_count = 0
+        metric_count = 0
+
         for hit in response:
 
-            table = Table(name=hit.table_name,
-                          key=hit.table_key,
-                          description=hit.table_description,
-                          cluster=hit.cluster,
-                          database=hit.database,
-                          schema_name=hit.schema_name,
-                          column_names=hit.column_names,
-                          tags=hit.tag_names,
-                          last_updated_epoch=hit.table_last_updated_epoch)
+            if hit.meta.doc_type == 'table':
+                table_count += 1
 
-            table_results.append(table)
+                table = Table(name=hit.table_name,
+                              key=hit.table_key,
+                              description=hit.table_description,
+                              cluster=hit.cluster,
+                              database=hit.database,
+                              schema_name=hit.schema_name,
+                              column_names=hit.column_names,
+                              tags=hit.tag_names,
+                              last_updated_epoch=hit.table_last_updated_epoch)
+
+                table_results.append(table)
+
+            elif hit.meta.doc_type == 'dashboard':
+                dashboard_count += 1
+
+                dashboard = Dashboard(dashboard_group=hit.dashboard_group,
+                                      dashboard_name=hit.dashboard_name,
+                                      description=hit.description,
+                                      last_reload_time=hit.last_reload_time,
+                                      user_id=hit.user_id,
+                                      user_name=hit.user_name,
+                                      tags=hit.tags)
+
+                dashboard_results.append(dashboard)
+
+            elif hit.meta.doc_type == 'metric':
+                metric_count += 1
+
+                metric = Metric(dashboard_group=hit.dashboard_group,
+                                dashboard_name=hit.dashboard_name,
+                                metric_name=hit.metric_name,
+                                metric_function=hit.metric_function,
+                                metric_description=hit.metric_description,
+                                metric_type=hit.metric_type,
+                                metric_group=hit.metric_group)
+
+                metric_results.append(metric)
+
+        results = {
+                    "dashboards": {"result_count": dashboard_count, "results": dashboard_results},
+                    "tables": {"result_count": table_count, "results": table_results},
+                    "metrics": {"result_count": metric_count, "results": metric_results}
+                    }
 
         return SearchResult(total_results=response.hits.total,
-                            results=table_results)
+                            results=results)
 
     def _search_helper(self, query_term: str,
                        page_index: int,
@@ -135,6 +174,16 @@ class ElasticsearchProxy:
                     "field_value_factor": {
                         "field": "total_usage",
                         "modifier": "log1p"
+                    }
+                }
+            }
+
+            d = {
+                "function_score": {
+                    "query": {
+                        "multi_match": {
+                            "query": query_term
+                        }
                     }
                 }
             }
@@ -210,7 +259,7 @@ class ElasticsearchProxy:
         field_name = self._field_name_transform(field_name=field_name)
 
         # We allow user to use ? * for wildcard support
-        m = re.search('[\?\*]', field_value)
+        m = re.search(r'[\?\*]', field_value)
         if m:
             return self._search_wildcard_helper(field_value=field_value,
                                                 page_index=page_index,
@@ -242,48 +291,3 @@ class ElasticsearchProxy:
         return self._search_helper(query_term=query_term,
                                    page_index=page_index,
                                    client=s)
-
-
-_elasticsearch_proxy = None
-_elasticsearch_lock = Lock()
-
-
-def get_elasticsearch_proxy() -> ElasticsearchProxy:
-    """
-    Fetch ElasticSearch proxy instance. Use a lock to create an instance
-    if one doesn't exist
-    :return: ElasticSearchProxy instance
-    """
-    global _elasticsearch_proxy
-
-    # elasticsearch cluster host to connect to
-    host = current_app.config.get(config.ELASTICSEARCH_ENDPOINT_KEY, None)
-
-    # elasticsearch index
-    index = current_app.config.get(config.ELASTICSEARCH_INDEX_KEY, DEFAULT_ES_INDEX)
-
-    # user name and password to connect to elasticsearch cluster
-    auth_user = current_app.config.get(config.ELASTICSEARCH_AUTH_USER_KEY, '')
-    auth_pw = current_app.config.get(config.ELASTICSEARCH_AUTH_PW_KEY, '')
-
-    # fully constructed client object to use, if provided
-    elasticsearch_client = current_app.config.get(config.ELASTICSEARCH_CLIENT_KEY, None)
-
-    # number of results per search page
-    page_size = current_app.config.get(config.SEARCH_PAGE_SIZE_KEY, DEFAULT_PAGE_SIZE)
-
-    if _elasticsearch_proxy:
-        return _elasticsearch_proxy
-
-    with _elasticsearch_lock:
-        if _elasticsearch_proxy:
-            return _elasticsearch_proxy
-        else:
-            _elasticsearch_proxy = ElasticsearchProxy(host=host,
-                                                      index=index,
-                                                      auth_user=auth_user,
-                                                      auth_pw=auth_pw,
-                                                      elasticsearch_client=elasticsearch_client,
-                                                      page_size=page_size)
-
-    return _elasticsearch_proxy
