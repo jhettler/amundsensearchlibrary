@@ -61,7 +61,7 @@ pipeline {
         script {
             dockerRegistry = new DockerRegistry(this).login('dcreg.service.consul')
             def otherParams = "--label build_version=${buildVersion} --label build_branch=${env.BRANCH_NAME} --label build_url=${BUILD_URL} --label build_type=${enviro.toLowerCase()}"
-            dockerImage = docker.build("${params.image_name}", "-f Dockerfile $otherParams .")
+            dockerImage = docker.build("${params.image_name}", "-f public.Dockerfile $otherParams .")
         }
       }
     }
