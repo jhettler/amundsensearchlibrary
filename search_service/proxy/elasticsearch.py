@@ -82,7 +82,7 @@ class ElasticsearchProxy(BaseProxy):
         # Use {page_index} to calculate index of results to fetch from
         start_from = page_index * self.page_size
         end_at = start_from + self.page_size
-        client = client[start_from:end_at]
+        client = client[0:1000]
         response = client.execute()
 
         table_count = 0
@@ -125,7 +125,6 @@ class ElasticsearchProxy(BaseProxy):
                 metric = Metric(dashboard_group=hit.dashboard_group,
                                 dashboard_name=hit.dashboard_name,
                                 metric_name=hit.metric_name,
-                                metric_function=hit.metric_function,
                                 metric_description=hit.metric_description,
                                 metric_type=hit.metric_type,
                                 metric_group=hit.metric_group)
