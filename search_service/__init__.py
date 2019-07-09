@@ -39,9 +39,9 @@ def create_app(*, config_module_class: str) -> Flask:
     api_bp = Blueprint('api', __name__)
     api_bp.add_url_rule('/healthcheck', 'healthcheck', healthcheck)
     api = Api(api_bp)
-    api.add_resource(SearchAPI, '/search')
+    api.add_resource(SearchAPI, '/search/<type_name>')
     api.add_resource(SearchFieldAPI,
-                     '/search/field/<field_name>/field_val/<field_value>')
+                     '/search/<type_name>/field/<field_name>/field_val/<field_value>')
 
     app.register_blueprint(api_bp)
 

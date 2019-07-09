@@ -56,15 +56,37 @@ metric_result_fields = {
     "results": fields.List(fields.Nested(metric_fields), default=[])
 }
 
-result_fields = {
-    "dashboards": fields.Nested(dashboard_result_fields),
+table_result_fields = {
+    # "dashboards": fields.Nested(dashboard_result_fields),
     "tables": fields.Nested(table_result_fields),
-    "metrics": fields.Nested(metric_result_fields),
+    # "metrics": fields.Nested(metric_result_fields),
 }
 
-search_results = {
+dashboard_result_fields = {
+    # "dashboards": fields.Nested(dashboard_result_fields),
+    "dashboards": fields.Nested(dashboard_result_fields),
+    # "metrics": fields.Nested(metric_result_fields),
+}
+
+metric_result_fields = {
+    # "dashboards": fields.Nested(dashboard_result_fields),
+    "metrics": fields.Nested(metric_result_fields),
+    # "metrics": fields.Nested(metric_result_fields),
+}
+
+table_search_results = {
     "total_results": fields.Integer,
-    "results":  fields.Nested(result_fields)
+    "results":  fields.Nested(table_result_fields)
+}
+
+dashboard_search_results = {
+    "total_results": fields.Integer,
+    "results":  fields.Nested(dashboard_result_fields)
+}
+
+metric_search_results = {
+    "total_results": fields.Integer,
+    "results":  fields.Nested(metric_result_fields)
 }
 
 
@@ -72,7 +94,7 @@ class SearchAPI(Resource):
     """
     Search API
     """
-    def __init__(self) -> None:
+    def __init__(self, **kwargs) -> None:
         self.proxy = get_proxy_client()
 
         self.parser = reqparse.RequestParser(bundle_errors=True)
@@ -82,14 +104,25 @@ class SearchAPI(Resource):
 
         super(SearchAPI, self).__init__()
 
-    @marshal_with(search_results)
-    def get(self) -> Iterable[Any]:
+    # @marshal_with(search_results)
+    def get(self, **kwargs) -> Iterable[Any]:
         """
         Fetch search results based on query_term.
         :return: list of table results. List can be empty if query
         doesn't match any tables
         """
         args = self.parser.parse_args(strict=True)
+        if kwargs.get('type_name') == 'table':
+            self.proxy.index = 'tables_alias'
+            marshaling_template = table_search_results
+        elif kwargs.get('type_name') == 'dashboard':
+            self.proxy.index = 'dashboard_alias'
+            marshaling_template = dashboard_search_results
+        elif kwargs.get('type_name') == 'metric':
+            self.proxy.index = 'metric_alias'
+            marshaling_template = metric_search_results
+        else:
+            raise NotImplementedError
 
         try:
 
@@ -97,6 +130,8 @@ class SearchAPI(Resource):
                 query_term=args['query_term'],
                 page_index=args['page_index']
             )
+
+            results = marshal(results, marshaling_template)
 
             return results, 200
 
@@ -120,9 +155,9 @@ class SearchFieldAPI(Resource):
 
         super(SearchFieldAPI, self).__init__()
 
-    @marshal_with(search_results)
+#    @marshal_with(search_results)
     def get(self, *, field_name: str,
-            field_value: str) -> Iterable[Any]:
+            field_value: str, **kwargs) -> Iterable[Any]:
         """
         Fetch search results based on query_term.
 
@@ -132,6 +167,17 @@ class SearchFieldAPI(Resource):
         doesn't match any tables
         """
         args = self.parser.parse_args(strict=True)
+        if kwargs.get('type_name') == 'table':
+            self.proxy.index = 'tables_alias'
+            marshaling_template = table_search_results
+        elif kwargs.get('type_name') == 'dashboard':
+            self.proxy.index = 'dashboard_alias'
+            marshaling_template = dashboard_search_results
+        elif kwargs.get('type_name') == 'metric':
+            self.proxy.index = 'metric_alias'
+            marshaling_template = metric_search_results
+        else:
+            raise NotImplementedError        
 
         try:
             results = self.proxy.fetch_search_results_with_field(
@@ -140,6 +186,8 @@ class SearchFieldAPI(Resource):
                 field_value=field_value,
                 page_index=args['page_index']
             )
+
+            results = marshal(results, marshaling_template)
 
             return results, 200
 

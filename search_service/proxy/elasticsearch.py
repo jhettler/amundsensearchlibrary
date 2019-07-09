@@ -50,7 +50,7 @@ class ElasticsearchProxy(BaseProxy):
                                                                       user=user,
                                                                       password=password)
 
-        self.index = index or current_app.config.get(config.ELASTICSEARCH_INDEX_KEY, DEFAULT_ES_INDEX)
+        self.index = index or current_app.config.get(config.ELASTICSEARCH_TABLE_INDEX_KEY, DEFAULT_ES_INDEX)
         self.page_size = page_size
 
     @staticmethod
@@ -82,7 +82,7 @@ class ElasticsearchProxy(BaseProxy):
         # Use {page_index} to calculate index of results to fetch from
         start_from = page_index * self.page_size
         end_at = start_from + self.page_size
-        client = client[0:1000]
+        client = client[start_from:end_at]
         response = client.execute()
 
         table_count = 0
@@ -132,9 +132,9 @@ class ElasticsearchProxy(BaseProxy):
                 metric_results.append(metric)
 
         results = {
-                    "dashboards": {"result_count": dashboard_count, "results": dashboard_results},
-                    "tables": {"result_count": table_count, "results": table_results},
-                    "metrics": {"result_count": metric_count, "results": metric_results}
+                    "dashboards": {"result_count": response.hits.total, "results": dashboard_results},
+                    "tables": {"result_count": response.hits.total, "results": table_results},
+                    "metrics": {"result_count": response.hits.total, "results": metric_results}
                     }
 
         return SearchResult(total_results=response.hits.total,
