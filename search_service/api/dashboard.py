@@ -21,7 +21,7 @@ search_dashboard_results = {
     "results":  fields.Nested(dashboard_fields)
 }
 
-DASHBOARD_INDEX = 'dashboard_alias'
+DASHBOARD_INDEX = 'dashboards_alias'
 
 
 class SearchDashboardAPI(Resource):

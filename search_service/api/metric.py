@@ -21,7 +21,7 @@ search_metric_results = {
     "results":  fields.Nested(metric_fields)
 }
 
-METRIC_INDEX = 'metric_alias'
+METRIC_INDEX = 'metrics_alias'
 
 
 class SearchMetricAPI(Resource):
