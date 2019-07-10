@@ -1,11 +1,23 @@
+import ast
+import importlib
 import os
 import logging
+import sys
 
 from flask import Flask, Blueprint
 from flask_restful import Api
+from typing import Dict, Any    # noqa: F401
 
-from search_service.api.search import SearchAPI, SearchFieldAPI
+from search_service.api.table import SearchTableAPI, SearchTableFieldAPI
+from search_service.api.user import SearchUserAPI
+from search_service.api.dashboard import SearchDashboardAPI, SearchDashboardFieldAPI
+from search_service.api.metric import SearchMetricAPI, SearchMetricFieldAPI
 from search_service.api.healthcheck import healthcheck
+
+# For customized flask use below arguments to override.
+FLASK_APP_MODULE_NAME = os.getenv('FLASK_APP_MODULE_NAME')
+FLASK_APP_CLASS_NAME = os.getenv('FLASK_APP_CLASS_NAME')
+FLASK_APP_KWARGS_DICT_STR = os.getenv('FLASK_APP_KWARGS_DICT')
 
 
 def create_app(*, config_module_class: str) -> Flask:
@@ -23,8 +35,24 @@ def create_app(*, config_module_class: str) -> Flask:
     :param config_module_class: name of the config
     :return: Flask
     """
+    if FLASK_APP_MODULE_NAME and FLASK_APP_CLASS_NAME:
+        print(f'Using requested Flask module {FLASK_APP_MODULE_NAME} '
+              f'and class {FLASK_APP_CLASS_NAME}', file=sys.stderr)
+        class_obj = getattr(
+            importlib.import_module(FLASK_APP_MODULE_NAME),
+            FLASK_APP_CLASS_NAME
+        )
 
-    app = Flask(__name__)
+        flask_kwargs_dict = {}  # type: Dict[str, Any]
+        if FLASK_APP_KWARGS_DICT_STR:
+            print(f'Using kwargs {FLASK_APP_KWARGS_DICT_STR} to instantiate Flask',
+                  file=sys.stderr)
+            flask_kwargs_dict = ast.literal_eval(FLASK_APP_KWARGS_DICT_STR)
+
+        app = class_obj(__name__, **flask_kwargs_dict)
+
+    else:
+        app = Flask(__name__)
 
     logging.info('Creating app with config name {}'
                  .format(config_module_class))
@@ -39,9 +67,23 @@ def create_app(*, config_module_class: str) -> Flask:
     api_bp = Blueprint('api', __name__)
     api_bp.add_url_rule('/healthcheck', 'healthcheck', healthcheck)
     api = Api(api_bp)
-    api.add_resource(SearchAPI, '/search/<type_name>')
-    api.add_resource(SearchFieldAPI,
-                     '/search/<type_name>/field/<field_name>/field_val/<field_value>')
+    # Table Search API
+    api.add_resource(SearchTableAPI, '/search_table')
+    api.add_resource(SearchTableFieldAPI,
+                     '/search_table/field/<field_name>/field_val/<field_value>')
+
+    # User Search API
+    api.add_resource(SearchUserAPI, '/search_user')
+
+    # Dashboard Search API
+    api.add_resource(SearchDashboardAPI, '/search_dashboard')
+    api.add_resource(SearchDashboardFieldAPI,
+                     '/search_dashboard/field/<field_name>/field_val/<field_value>')
+
+    # Metric Search API
+    api.add_resource(SearchMetricAPI, '/search_metric')
+    api.add_resource(SearchMetricFieldAPI,
+                     '/search_metric/field/<field_name>/field_val/<field_value>')
 
     app.register_blueprint(api_bp)
 

@@ -1,12 +1,10 @@
-from typing import List, Dict
-from search_service.models.table import Table
-from search_service.models.dashboard import Dashboard
+from typing import Any, List
 
 
 class SearchResult:
     def __init__(self, *,
                  total_results: int,
-                 results: Dict) -> None:
+                 results: List[Any]) -> None:
         self.total_results = total_results
         self.results = results
 

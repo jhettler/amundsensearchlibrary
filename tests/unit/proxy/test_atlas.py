@@ -1,12 +1,13 @@
 import string
 import unittest
 
-from mock import MagicMock
+from mock import MagicMock, patch
 from typing import List, Callable, Tuple
 
-from search_service import create_app
+from search_service import create_app, config
 from search_service.models.search_result import SearchResult
 from search_service.models.table import Table
+from search_service.proxy import get_proxy_client
 
 
 class TestAtlasProxy(unittest.TestCase):
@@ -174,11 +175,39 @@ class TestAtlasProxy(unittest.TestCase):
 
         return guid_filter
 
+    def test_setup_client(self) -> None:
+        with self.app_context:
+            from search_service.proxy.atlas import AtlasProxy
+            client = AtlasProxy(
+                host="http://localhost:21000",
+                user="admin",
+                password="admin",
+                page_size=1337
+            )
+            self.assertEqual(client.atlas.base_url, "http://localhost:21000")
+            self.assertEqual(client.atlas.client.request_params['headers']['Authorization'], 'Basic YWRtaW46YWRtaW4=')
+            self.assertEqual(client.page_size, 1337)
+
+    @patch('search_service.proxy._proxy_client', None)
+    def test_setup_config(self) -> None:
+        # Gather all the configuration to create a Proxy Client
+        self.app.config[config.PROXY_ENDPOINT] = "http://localhost:21000"
+        self.app.config[config.PROXY_USER] = "admin"
+        self.app.config[config.PROXY_PASSWORD] = "admin"
+        self.app.config[config.PROXY_CLIENT] = config.PROXY_CLIENTS['ATLAS']
+        self.app.config[config.SEARCH_PAGE_SIZE_KEY] = 1337
+
+        client = get_proxy_client()
+        self.assertEqual(client.atlas.base_url, "http://localhost:21000")
+        self.assertEqual(client.atlas.client.request_params['headers']['Authorization'], 'Basic YWRtaW46YWRtaW4=')
+        self.assertEqual(client.page_size, 1337)
+
     def test_search_normal(self):
         expected = SearchResult(total_results=1,
                                 results=[Table(name=self._qualified('table', 'Table1'),
-                                               key=f"TEST_ENTITY://TEST_CLUSTER.{self._qualified('db', 'TEST_DB')}/"
-                                               f"{self._qualified('table', 'Table1')}",
+                                               key=f"TEST_ENTITY://TEST_CLUSTER."
+                                                   f"{self._qualified('db', 'TEST_DB')}/"
+                                                   f"{self._qualified('table', 'Table1')}",
                                                description='Dummy Description',
                                                cluster='TEST_CLUSTER',
                                                database='TEST_ENTITY',
@@ -198,8 +227,7 @@ class TestAtlasProxy(unittest.TestCase):
                                                    # 'column@name'
                                                ],
                                                tags=[],
-                                               last_updated_epoch=234),
-                                         ])
+                                               last_updated_epoch=234)])
         self.proxy.atlas.search_dsl = self.dsl_inject(
             [
                 (lambda dsl: "select count()" in dsl and "Table" in dsl,
@@ -213,7 +241,7 @@ class TestAtlasProxy(unittest.TestCase):
             self.entity2,
             self.db_entity
         ])
-        resp = self.proxy.fetch_search_results(query_term="Table")
+        resp = self.proxy.fetch_table_search_results(query_term="Table")
         self.assertTrue(resp.total_results == 2, "there should be 2 search result")
         self.assertIsInstance(resp.results[0], Table, "Search result received is not of 'Table' type!")
         self.assertDictEqual(vars(resp.results[0]), vars(expected.results[0]),
@@ -235,7 +263,7 @@ class TestAtlasProxy(unittest.TestCase):
             self.entity2,
             self.db_entity
         ])
-        resp = self.proxy.fetch_search_results(query_term="Table1")
+        resp = self.proxy.fetch_table_search_results(query_term="Table1")
         self.assertTrue(resp.total_results == 0, "there should no search results")
         self.assertIsInstance(resp, SearchResult, "Search result received is not of 'SearchResult' type!")
         self.assertDictEqual(vars(resp), vars(expected),
@@ -247,8 +275,9 @@ class TestAtlasProxy(unittest.TestCase):
 
             expected = SearchResult(total_results=1,
                                     results=[Table(name=self._qualified('table', 'Table1'),
-                                                   key=f"TEST_ENTITY://TEST_CLUSTER.{self._qualified('db', 'TEST_DB')}/"
-                                                   f"{self._qualified('table', 'Table1')}",
+                                                   key=f"TEST_ENTITY://TEST_CLUSTER"
+                                                       f".{self._qualified('db', 'TEST_DB')}/"
+                                                       f"{self._qualified('table', 'Table1')}",
                                                    description='Dummy Description',
                                                    cluster='TEST_CLUSTER',
                                                    database='TEST_ENTITY',
@@ -270,7 +299,7 @@ class TestAtlasProxy(unittest.TestCase):
                 self.entity1,
                 self.db_entity
             ])
-            resp = self.proxy.fetch_search_results_with_field(
+            resp = self.proxy.fetch_table_search_results_with_field(
                 query_term=field + "Table1",
                 field_name=field,
                 field_value="Table1"
@@ -294,7 +323,7 @@ class TestAtlasProxy(unittest.TestCase):
             self.entity2,
             self.db_entity
         ])
-        resp = self.proxy.fetch_search_results(query_term="unknown:Table1")
+        resp = self.proxy.fetch_table_search_results(query_term="unknown:Table1")
         self.assertTrue(resp.total_results == 0, "there should no search results")
         self.assertIsInstance(resp, SearchResult, "Search result received is not of 'SearchResult' type!")
         self.assertDictEqual(vars(resp), vars(expected),
