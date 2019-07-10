@@ -1,7 +1,8 @@
-from typing import Iterable
+from typing import Iterable, Set
+from .base import Base
 
 
-class Dashboard:
+class Dashboard(Base):
     def __init__(self, *,
                  dashboard_group: str,
                  dashboard_name: str,
@@ -17,6 +18,18 @@ class Dashboard:
         self.user_id = user_id
         self.user_name = user_name
         self.tags = tags
+
+    @classmethod
+    def get_attrs(cls) -> Set:
+        return {
+            'dashboard_group',
+            'dashboard_name',
+            'description',
+            'last_reload_time',
+            'user_id',
+            'user_name',
+            'tags'
+        }
 
     def __repr__(self) -> str:
         return 'Dashboard(dashboard_group={!r}, dashboard_name={!r}, ' \

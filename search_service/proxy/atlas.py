@@ -29,12 +29,11 @@ class AtlasProxy(BaseProxy):
 
     def __init__(self, *,
                  host: str = None,
-                 index: str = None,
                  user: str = '',
                  password: str = '',
+                 client: Atlas = None,
                  page_size: int = 10) -> None:
-        self.atlas = Atlas(host, username=user, password=password)
-        self.index = index
+        self.atlas = client or Atlas(host, username=user, password=password)
         self.page_size = page_size
 
     @staticmethod
@@ -112,11 +111,12 @@ class AtlasProxy(BaseProxy):
         return table_results
 
     @timer_with_counter
-    def fetch_search_results_with_field(self, *,
-                                        query_term: str,
-                                        field_name: str,
-                                        field_value: str,
-                                        page_index: int = 0) -> SearchResult:
+    def fetch_table_search_results_with_field(self, *,
+                                              query_term: str,
+                                              field_name: str,
+                                              field_value: str,
+                                              page_index: int = 0,
+                                              index: str = '') -> SearchResult:
         """
         Query Atlas and return results as list of Table objects.
         Per field name we have a count query and a query for the tables.
@@ -126,6 +126,7 @@ class AtlasProxy(BaseProxy):
         :param field_name: field name to do the searching(e.g schema_name, tag_names)
         :param field_value: value for the field for filtering
         :param page_index: index of search page user is currently on
+        :param index: search index (different resource corresponding to different index
         :return: SearchResult Object
         :return:
         """
@@ -168,9 +169,10 @@ class AtlasProxy(BaseProxy):
         return SearchResult(total_results=count_value, results=tables)
 
     @timer_with_counter
-    def fetch_search_results(self, *,
-                             query_term: str,
-                             page_index: int = 0) -> SearchResult:
+    def fetch_table_search_results(self, *,
+                                   query_term: str,
+                                   page_index: int = 0,
+                                   index: str = '') -> SearchResult:
         """
         Query Atlas and return results as list of Table objects
         We use the Atlas DSL for querying the tables.
@@ -178,6 +180,7 @@ class AtlasProxy(BaseProxy):
 
         :param query_term: search query term
         :param page_index: index of search page user is currently on
+        :param index: search index (different resource corresponding to different index)
         :return: SearchResult Object
         """
 
@@ -209,3 +212,9 @@ class AtlasProxy(BaseProxy):
                 tables.extend(self._parse_results(response=s.entities))
 
         return SearchResult(total_results=count_value, results=tables)
+
+    def fetch_user_search_results(self, *,
+                                  query_term: str,
+                                  page_index: int = 0,
+                                  index: str = '') -> SearchResult:
+        pass

@@ -1,7 +1,8 @@
-from typing import Iterable
+from typing import Iterable, Set
+from .base import Base
 
 
-class Metric:
+class Metric(Base):
     def __init__(self, *,
                  dashboard_group: str,
                  dashboard_name: str,
@@ -15,6 +16,17 @@ class Metric:
         self.metric_description = metric_description
         self.metric_type = metric_type
         self.metric_group = metric_group
+
+    @classmethod
+    def get_attrs(cls) -> Set:
+        return {
+            'dashboard_group',
+            'dashboard_name',
+            'metric_name',
+            'metric_description',
+            'metric_type',
+            'metric_group'
+        }
 
     def __repr__(self) -> str:
         return 'Metric(dashboard_group={!r}, dashboard_name={!r}, ' \
