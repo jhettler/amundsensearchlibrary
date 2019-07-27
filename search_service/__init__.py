@@ -85,6 +85,9 @@ def create_app(*, config_module_class: str) -> Flask:
     api.add_resource(SearchMetricFieldAPI,
                      '/search_metric/field/<field_name>/field_val/<field_value>')
 
+    # User Search API
+    api.add_resource(SearchUserAPI, '/search_user')
+
     app.register_blueprint(api_bp)
 
     return app

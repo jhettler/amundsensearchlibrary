@@ -327,7 +327,8 @@ class ElasticsearchProxy(BaseProxy):
             'tag': 'tags',
             'schema': 'schema_name.raw',
             'table': 'name.raw',
-            'column': 'column_names.raw'
+            'column': 'column_names.raw',
+            'database': 'database.raw'
         }
 
         if query_term:
@@ -436,6 +437,11 @@ class ElasticsearchProxy(BaseProxy):
         :return: SearchResult Object
         :return:
         """
+        current_index = index if index else \
+            current_app.config.get(config.ELASTICSEARCH_INDEX_KEY, DEFAULT_ES_INDEX)
+        if not query_term:
+            # return empty result for blank query term
+            return SearchResult(total_results=0, results=[])
 
         current_index = index if index else \
             current_app.config.get(config.ELASTICSEARCH_METRIC_INDEX_KEY, DEFAULT_ES_INDEX)
