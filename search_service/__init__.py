@@ -68,8 +68,8 @@ def create_app(*, config_module_class: str) -> Flask:
     api_bp.add_url_rule('/healthcheck', 'healthcheck', healthcheck)
     api = Api(api_bp)
     # Table Search API
-    api.add_resource(SearchTableAPI, '/search_table')
-    api.add_resource(SearchTableFieldAPI,
+    api.add_resource(SearchTableAPI, '/search', '/search_table')
+    api.add_resource(SearchTableFieldAPI, '/search/field/<field_name>/field_val/<field_value>',
                      '/search_table/field/<field_name>/field_val/<field_value>')
 
     # User Search API

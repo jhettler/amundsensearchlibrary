@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from typing import Iterable, Any
 
-from flask_restful import Resource, fields, marshal_with, reqparse, marshal
+from flask_restful import Resource, fields, marshal_with, reqparse
 
 from search_service.proxy import get_proxy_client
 
@@ -18,7 +18,7 @@ dashboard_fields = {
 
 search_dashboard_results = {
     "total_results": fields.Integer,
-    "results":  fields.Nested(dashboard_fields)
+    "results": fields.Nested(dashboard_fields)
 }
 
 DASHBOARD_INDEX = 'dashboards_alias'
@@ -82,7 +82,7 @@ class SearchDashboardFieldAPI(Resource):
 
     @marshal_with(search_dashboard_results)
     def get(self, *, field_name: str,
-            field_value: str, **kwargs) -> Iterable[Any]:
+            field_value: str) -> Iterable[Any]:
         """
         Fetch search results based on query_term.
 

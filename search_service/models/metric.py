@@ -1,40 +1,35 @@
-from typing import Iterable, Set
+from typing import Set
 from .base import Base
 
 
 class Metric(Base):
     def __init__(self, *,
-                 dashboard_group: str,
-                 dashboard_name: str,
-                 metric_name: str,
-                 metric_description: str,
-                 metric_type: str,
-                 metric_group: str) -> None:
-        self.dashboard_group = dashboard_group
-        self.dashboard_name = dashboard_name
-        self.metric_name = metric_name
-        self.metric_description = metric_description
-        self.metric_type = metric_type
-        self.metric_group = metric_group
+                 name: str,
+                 description: str,
+                 type: str,
+                 dashboards: str,
+                 tags: str) -> None:
+        self.name = name
+        self.description = description
+        self.type = type
+        self.dashboards = dashboards
+        self.tags = tags
 
     @classmethod
     def get_attrs(cls) -> Set:
         return {
-            'dashboard_group',
-            'dashboard_name',
-            'metric_name',
-            'metric_description',
-            'metric_type',
-            'metric_group'
+            'name',
+            'description',
+            'type',
+            'dashboards',
+            'tags'
         }
 
     def __repr__(self) -> str:
-        return 'Metric(dashboard_group={!r}, dashboard_name={!r}, ' \
-               'metric_name={!r}, metric_description={!r},' \
-               'metric_type={!r}, metric_group={!r})' \
-                            .format(self.dashboard_group,
-                                    self.dashboard_name,
-                                    self.metric_name,
-                                    self.metric_description,
-                                    self.metric_type,
-                                    self.metric_group)
+        return 'Metric(name={!r}, description={!r},' \
+               'type={!r}, dashboards={!r}), tags={!r})' \
+            .format(self.name,
+                    self.description,
+                    self.type,
+                    self.dashboards,
+                    self.tags)

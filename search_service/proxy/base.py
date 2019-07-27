@@ -31,3 +31,35 @@ class BaseProxy(metaclass=ABCMeta):
                                   page_index: int = 0,
                                   index: str = '') -> SearchResult:
         pass
+
+    @abstractmethod
+    def fetch_dashboard_search_results_with_field(self, *,
+                                                  query_term: str,
+                                                  field_name: str,
+                                                  field_value: str,
+                                                  page_index: int = 0,
+                                                  index: str = '') -> SearchResult:
+        pass
+
+    @abstractmethod
+    def fetch_dashboard_search_results(self, *,
+                                       query_term: str,
+                                       page_index: int = 0,
+                                       index: str = '') -> SearchResult:
+        pass
+
+    @abstractmethod
+    def fetch_metric_search_results_with_field(self, *,
+                                               query_term: str,
+                                               field_name: str,
+                                               field_value: str,
+                                               page_index: int = 0,
+                                               index: str = '') -> SearchResult:
+        pass
+
+    @abstractmethod
+    def fetch_metric_search_results(self, *,
+                                    query_term: str,
+                                    page_index: int = 0,
+                                    index: str = '') -> SearchResult:
+        pass

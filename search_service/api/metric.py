@@ -1,24 +1,22 @@
 from http import HTTPStatus
 from typing import Iterable, Any
 
-from flask_restful import Resource, fields, marshal_with, reqparse, marshal
+from flask_restful import Resource, fields, marshal_with, reqparse
 
 from search_service.proxy import get_proxy_client
 
 metric_fields = {
-    "dashboard_group": fields.String,
-    "dashboard_name": fields.String,
-    "metric_name": fields.String,
-    "metric_function": fields.String,
+    "name": fields.String,
     # description can be empty, if no description is present in DB
-    "metric_description": fields.String,
-    "metric_type": fields.String,
-    "metric_group": fields.String
+    "description": fields.String,
+    "type": fields.String,
+    "dashboards": fields.List(fields.String),
+    "tags": fields.List(fields.String)
 }
 
 search_metric_results = {
     "total_results": fields.Integer,
-    "results":  fields.Nested(metric_fields)
+    "results": fields.Nested(metric_fields)
 }
 
 METRIC_INDEX = 'metrics_alias'
@@ -82,7 +80,7 @@ class SearchMetricFieldAPI(Resource):
 
     @marshal_with(search_metric_results)
     def get(self, *, field_name: str,
-            field_value: str, **kwargs) -> Iterable[Any]:
+            field_value: str) -> Iterable[Any]:
         """
         Fetch search results based on query_term.
 

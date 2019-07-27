@@ -1,4 +1,4 @@
-from typing import Iterable, Set
+from typing import Set
 from .base import Base
 
 
@@ -35,10 +35,10 @@ class Dashboard(Base):
         return 'Dashboard(dashboard_group={!r}, dashboard_name={!r}, ' \
                'description={!r}, last_reload_time={!r}, user_id={!r},' \
                'user_name={!r}, tags={!r})' \
-                            .format(self.dashboard_group,
-                                    self.dashboard_name,
-                                    self.description,
-                                    self.last_reload_time,
-                                    self.user_id,
-                                    self.user_name,
-                                    self.tags)
+            .format(self.dashboard_group,
+                    self.dashboard_name,
+                    self.description,
+                    self.last_reload_time,
+                    self.user_id,
+                    self.user_name,
+                    self.tags)
