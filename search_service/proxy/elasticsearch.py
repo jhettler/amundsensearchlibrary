@@ -249,10 +249,10 @@ class ElasticsearchProxy(BaseProxy):
                                    "column_descriptions", "tags"]
                     }
                 },
-                # "field_value_factor": {
-                #     "field": "total_usage",
-                #     "modifier": "log1p"
-                # }
+                "field_value_factor": {
+                    "field": "total_usage",
+                    "modifier": "log1p"
+                }
             }
         }
 
