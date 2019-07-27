@@ -72,9 +72,6 @@ def create_app(*, config_module_class: str) -> Flask:
     api.add_resource(SearchTableFieldAPI, '/search/field/<field_name>/field_val/<field_value>',
                      '/search_table/field/<field_name>/field_val/<field_value>')
 
-    # User Search API
-    api.add_resource(SearchUserAPI, '/search_user')
-
     # Dashboard Search API
     api.add_resource(SearchDashboardAPI, '/search_dashboard')
     api.add_resource(SearchDashboardFieldAPI,
